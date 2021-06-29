@@ -10,8 +10,8 @@ int main(int argc, char *argv[]) {
 
     string filename = argv[1];
     DFA dfa0(filename);
-    //dfa0.print_dfa();
-    //dfa0.print_sets();
+    dfa0.print_dfa();
+    dfa0.print_sets();
 
     return 0;
 }
