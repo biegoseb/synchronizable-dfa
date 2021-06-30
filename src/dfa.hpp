@@ -17,14 +17,15 @@ class DFA
     void build_dfa();
     void add_final_state(int fs);
     void add_transition(int p, int a, int q);
+    DFA* getB(DFA origin);
     
 public:
     DFA(const string& input);
     void print_dfa();
     void print_sets();
-    unordered_set<int> get_nfs();
-    unordered_set<int> get_fs();
-    map<pair<int, int>, int> get_transitions();
+    unordered_set<string> get_nfs();
+    unordered_set<string> get_fs();
+    map<pair<string, string>, string> get_transitions();
     //void validate_string(const string& str);
 };
 
@@ -94,6 +95,8 @@ void DFA::print_sets()
     cout << endl;
 }
 
+
+
 unordered_set<int> DFA::get_nfs()
 {
     return non_final_states;
@@ -107,5 +110,31 @@ map<pair<int, int>, int> DFA::get_transitions()
 {
     return transitions;
 }
+
+DFA* DFA::getB(DFA origin) {
+    DFA* DFA_B = this;
+
+    for (int j = 0; j < ; ++j) {
+
+    }
+    /*double DFA_Bsize = 0;
+    DFA_Bsize = 2 * (pow(2, (origin.number_states)) - 1);
+    DFA_B->number_states = (DFA_Bsize/2)-1;
+    unordered_set<int> Bstates = origin.non_final_states;
+
+    for (int k = 0; k < origin.final_states.size(); k++) {
+        Bstates.insert(origin.final_states[k]);
+    }
+
+    for (int i = 0; i < DFA_Bsize; i++) {
+        for (int j = 0; j < origin.number_final_states; j++) {
+            if(Bstates[i] = origin.final_states[j]){
+
+            }
+        }
+    }*/
+    return DFA_B;
+}
+
 
 #endif // DFA_HPP
