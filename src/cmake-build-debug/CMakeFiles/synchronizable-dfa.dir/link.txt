@@ -1,3 +1,0 @@
-"C:\Program Files\JetBrains\CLion 2019.2.2\bin\cmake\win\bin\cmake.exe" -E remove -f CMakeFiles\synchronizable-dfa.dir/objects.a
-C:\MinGW\bin\ar.exe cr CMakeFiles\synchronizable-dfa.dir/objects.a @CMakeFiles\synchronizable-dfa.dir\objects1.rsp
-C:\MinGW\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\synchronizable-dfa.dir/objects.a -Wl,--no-whole-archive  -o synchronizable-dfa.exe -Wl,--out-implib,libsynchronizable-dfa.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\synchronizable-dfa.dir\linklibs.rsp

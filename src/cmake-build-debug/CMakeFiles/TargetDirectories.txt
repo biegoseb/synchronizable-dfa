@@ -1,3 +1,0 @@
-C:/Users/Usuario/Documents/GitHub/synchronizable-dfa/src/cmake-build-debug/CMakeFiles/synchronizable-dfa.dir
-C:/Users/Usuario/Documents/GitHub/synchronizable-dfa/src/cmake-build-debug/CMakeFiles/edit_cache.dir
-C:/Users/Usuario/Documents/GitHub/synchronizable-dfa/src/cmake-build-debug/CMakeFiles/rebuild_cache.dir
