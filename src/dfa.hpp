@@ -18,8 +18,10 @@ class DFA {
     void add_final_state(const string& fs);
     void add_transition(const string& p, int a, const string& q);
     //DFA* getB(DFA origin);
+    vector<string> power_set();
     DFA getB();
     map<string, list<string>> get_adjB();
+    vector<string> bfs();
     
 public:
     DFA(const string& input);
@@ -28,8 +30,7 @@ public:
     unordered_set<string> get_nfs();
     unordered_set<string> get_fs();
     map<pair<string, int>, string> get_transitions();
-    vector<string> power_set();
-    void bfs(string& start);
+    void is_sync(); 
 };
 
 DFA::DFA(const string& input) : input(input) {
@@ -141,9 +142,11 @@ map<string, list<string>> DFA::get_adjB() {
     return adj;
 }
 
-void DFA::bfs(string& start) {
+vector<string> DFA::bfs() {
     auto pset = power_set();
     unsigned int size = pset.size();
+    string start = pset.back(); // bigger set of power set
+    vector<string> path;
 
     // mark all states as not visited
     map<string, bool> visited;
@@ -161,11 +164,11 @@ void DFA::bfs(string& start) {
     while (!queue.empty()) {
         // dequeue a state from queue
         start = queue.front();
-        //cout << start << " ";
+        path.push_back(start);
         queue.pop_front();
         
-        // get all adjacent states of the dequeued state "start"
-        // mark as visited and enqueue it if has not been visited
+        /* get all adjacent states of the dequeued state "start"
+           mark as visited and enqueue it if has not been visited */
         auto adj = get_adjB(); 
         for (it = adj[start].begin(); it != adj[start].end(); ++it) {
             if (!visited[*it]) {
@@ -173,6 +176,20 @@ void DFA::bfs(string& start) {
                 queue.push_back(*it);
             }
         }
+    }
+    return path;
+}
+
+void DFA::is_sync() {
+    auto path = bfs();
+    for (const auto& state : path) {
+        if (state.size() == 1) {
+            // if unit state
+            // print path
+        }         
+        else {
+            cout << "NO" << endl;
+        }               
     }
 }
 
