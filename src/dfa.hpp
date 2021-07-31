@@ -20,18 +20,26 @@ class DFA {
     //DFA* getB(DFA origin);
     vector<string> power_set();
     DFA getB();
+    vector<string> generate_pairs_states(); // dec_sync
+    
+
     map<string, list<string>> get_adjB();
     vector<string> bfs();
     
 public:
+    DFA();
     DFA(const string& input);
     void print_dfa();
     void print_sets();
     unordered_set<string> get_nfs();
     unordered_set<string> get_fs();
     map<pair<string, int>, string> get_transitions();
-    void is_sync(); 
+    void is_sync();
+    void dec_sync();
+    DFA create_dec_dfa();
 };
+
+DFA::DFA() = default;
 
 DFA::DFA(const string& input) : input(input) {
     build_dfa();
@@ -75,9 +83,12 @@ void DFA::add_transition(const string& p, int a, const string& q) {
 }
 
 void DFA::print_dfa() {
-    cout << number_states << " " << initial_state << " " << number_final_states << " ";
-    for (const auto& fs : final_states)
-        cout << fs << " ";
+    //cout << number_states << " " << initial_state << " " << number_final_states << " ";
+    //for (const auto& fs : final_states)
+    //    cout << fs << " ";
+    //cout << endl;
+    for (const auto& s : states)
+        cout << s << " ";
     cout << endl;
     for (auto it = transitions.cbegin(); it != transitions.cend(); ++it)
         cout << it->first.first << " " << it->first.second << " " << it->second << endl;
@@ -128,10 +139,6 @@ vector<string> DFA::power_set() {
         pset.push_back(state);
     }
     return pset;
-}
-
-DFA DFA::getB() {
- //
 }
 
 map<string, list<string>> DFA::get_adjB() {
@@ -191,6 +198,64 @@ void DFA::is_sync() {
             cout << "NO" << endl;
         }               
     }
+}
+
+vector<string> DFA::generate_pairs_states() {
+    vector<string> pairs_states;
+    for (int i = 0; i < number_states; ++i) {
+        for (int j = i + 1; j < number_states; ++j) {
+            string pair = to_string(i) + to_string(j);
+            pairs_states.push_back(pair);
+        }
+    }
+    return pairs_states;
+}
+
+DFA DFA::create_dec_dfa() {
+    DFA result;
+    vector<string> pairs_states = generate_pairs_states();
+    result.number_states = this->number_states + pairs_states.size();
+    result.initial_state = this->initial_state;
+    result.number_final_states = this->number_final_states;
+
+    /* save states of new dfa */
+    result.states.insert(result.states.end(), this->states.begin(), this->states.end());
+    result.states.insert(result.states.end(), pairs_states.begin(), pairs_states.end());
+
+    /* generate new transitions */
+    result.transitions = this->transitions;
+    for (const auto& p : pairs_states) {
+        string s1 {p[0]};
+        string s2 {p[1]};
+
+        /* new transition with '0' */
+        string s1_0 = this->transitions[pair<string, int>(s1, 0)];
+        string s2_0 = this->transitions[pair<string, int>(s2, 0)];
+        string s3_0;
+        if (s1_0 == s2_0)
+            s3_0 = s1_0;
+        else  
+            s3_0 = s1_0 + s2_0;
+
+        /* new transition with '1' */
+        string s1_1 = this->transitions[pair<string, int>(s1, 1)];
+        string s2_1 = this->transitions[pair<string, int>(s2, 1)];
+        string s3_1;
+        if (s1_1 == s2_1)
+            s3_1 = s1_1;
+        else 
+            s3_1 = s1_1 + s2_1;
+
+        result.add_transition(p, 0, s3_0);
+        result.add_transition(p, 1, s3_1);
+    }
+    return result;
+}
+
+void DFA::dec_sync() {
+    vector<string> pairs_states = generate_pairs_states();
+    int n_pairs = pairs_states.size();
+    int count = 0;
 }
 
 /*DFA* DFA::getB(DFA origin) {
