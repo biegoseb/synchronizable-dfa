@@ -10,6 +10,7 @@ class DFA {
     int initial_state;
     int number_final_states;
     vector<string> states;
+    vector<string> pairs_states;
     unordered_set<string> non_final_states;
     unordered_set<string> final_states;
     map<pair<string, int>, string> transitions;
@@ -17,15 +18,20 @@ class DFA {
     void build_dfa();
     void add_final_state(const string& fs);
     void add_transition(const string& p, int a, const string& q);
+
+    /* min sync private methods */
     //DFA* getB(DFA origin);
     vector<string> power_set();
-    DFA getB();
-    vector<string> generate_pairs_states(); // dec_sync
-    
-
+    map<string, list<string>> get_adj_dec(DFA& dec_dfa);
     map<string, list<string>> get_adjB();
     vector<string> bfs();
-    
+
+    /* dec sync private methods */
+    vector<string> generate_pairs_states();
+    DFA create_dec_dfa();
+    bool is_unit(const string& state);
+    void dec_bfs(const string& pair_state, DFA& dec_dfa, int& count);
+
 public:
     DFA();
     DFA(const string& input);
@@ -35,8 +41,8 @@ public:
     unordered_set<string> get_fs();
     map<pair<string, int>, string> get_transitions();
     void is_sync();
-    void dec_sync();
-    DFA create_dec_dfa();
+    string dec_sync();
+    
 };
 
 DFA::DFA() = default;
@@ -87,6 +93,7 @@ void DFA::print_dfa() {
     //for (const auto& fs : final_states)
     //    cout << fs << " ";
     //cout << endl;
+    cout << "States: ";
     for (const auto& s : states)
         cout << s << " ";
     cout << endl;
@@ -139,6 +146,22 @@ vector<string> DFA::power_set() {
         pset.push_back(state);
     }
     return pset;
+}
+
+map<string, list<string>> DFA::get_adj_dec(DFA& dec_dfa) {
+    unsigned int size = dec_dfa.states.size();
+    map<string, list<string>> adj_list;
+
+    for (const auto& s : dec_dfa.states) {
+        list<string> l;
+        string s_0 = dec_dfa.transitions[pair<string, int>(s, 0)];
+        string s_1 = dec_dfa.transitions[pair<string, int>(s, 1)];
+        l.push_back(s_0);
+        if (s_0 != s_1)
+            l.push_back(s_1);
+        adj_list[s] = l;
+    }
+    return adj_list;
 }
 
 map<string, list<string>> DFA::get_adjB() {
@@ -214,6 +237,7 @@ vector<string> DFA::generate_pairs_states() {
 DFA DFA::create_dec_dfa() {
     DFA result;
     vector<string> pairs_states = generate_pairs_states();
+    result.pairs_states = pairs_states;
     result.number_states = this->number_states + pairs_states.size();
     result.initial_state = this->initial_state;
     result.number_final_states = this->number_final_states;
@@ -231,20 +255,16 @@ DFA DFA::create_dec_dfa() {
         /* new transition with '0' */
         string s1_0 = this->transitions[pair<string, int>(s1, 0)];
         string s2_0 = this->transitions[pair<string, int>(s2, 0)];
-        string s3_0;
-        if (s1_0 == s2_0)
-            s3_0 = s1_0;
-        else  
-            s3_0 = s1_0 + s2_0;
+        string s3_0 {s1_0};
+        if (s1_0 != s2_0)
+            s3_0 += s2_0;
 
         /* new transition with '1' */
         string s1_1 = this->transitions[pair<string, int>(s1, 1)];
         string s2_1 = this->transitions[pair<string, int>(s2, 1)];
-        string s3_1;
-        if (s1_1 == s2_1)
-            s3_1 = s1_1;
-        else 
-            s3_1 = s1_1 + s2_1;
+        string s3_1 {s1_1};
+        if (s1_1 != s2_1)
+            s3_1 += s2_1;
 
         result.add_transition(p, 0, s3_0);
         result.add_transition(p, 1, s3_1);
@@ -252,36 +272,66 @@ DFA DFA::create_dec_dfa() {
     return result;
 }
 
-void DFA::dec_sync() {
-    vector<string> pairs_states = generate_pairs_states();
-    int n_pairs = pairs_states.size();
-    int count = 0;
+bool DFA::is_unit(const string& state) {
+    return state.size() == 1;
 }
 
-/*DFA* DFA::getB(DFA origin) {
-    DFA* DFA_B = this;
+void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, int& count) {
+    string start = pair_state;
+    //vector<string> path;
 
-    for (int j = 0; j < ; ++j) {
+    /* mark all states as not visited */
+    map<string, bool> visited;
+    for (const auto& state : dec_dfa.states)
+        visited[state] = false;
+        
+    /* create a queue for bfs */
+    list<string> queue;
 
-    }
-    double DFA_Bsize = 0;
-    DFA_Bsize = 2 * (pow(2, (origin.number_states)) - 1);
-    DFA_B->number_states = (DFA_Bsize/2)-1;
-    unordered_set<int> Bstates = origin.non_final_states;
+    /* mark the current state as visited and enqueue it */
+    visited[start] = true;
+    queue.push_back(start);
 
-    for (int k = 0; k < origin.final_states.size(); k++) {
-        Bstates.insert(origin.final_states[k]);
-    }
-
-    for (int i = 0; i < DFA_Bsize; i++) {
-        for (int j = 0; j < origin.number_final_states; j++) {
-            if(Bstates[i] = origin.final_states[j]){
-
+    list<string>::iterator it;
+    while (!queue.empty()) {
+        /* dequeue a state from queue */
+        start = queue.front();
+        //path.push_back(start);
+        queue.pop_front();
+        
+        /* get all adjacent states of the dequeued state "start"
+           mark as visited and enqueue it if has not been visited */
+        auto adj = get_adj_dec(dec_dfa); 
+        for (it = adj[start].begin(); it != adj[start].end(); ++it) {
+            if (!visited[*it]) {
+                visited[*it] = true;
+                queue.push_back(*it);
+                if (is_unit(*it)) {
+                    ++count;
+                    queue.clear();
+                    break;
+                }
             }
         }
     }
-    return DFA_B;
-}*/
+    //return path;
+}
 
+string DFA::dec_sync() {
+    string output;
+    if (this->number_states == 1) {
+        output = "SI";
+        return output;
+    }
+    DFA dec_dfa = create_dec_dfa();
+    auto pairs_states = dec_dfa.pairs_states;
+    int n_pairs = pairs_states.size();
+    int count = 0;
+    for (const auto& p : pairs_states) {
+        dec_bfs(p, dec_dfa, count);
+    }
+    output = (count == n_pairs) ? "SI" : "NO";
+    return output;
+}
 
 #endif // DFA_HPP
