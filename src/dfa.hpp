@@ -404,7 +404,7 @@ string DFA::generate_w(const string& start, unordered_map<string, string>& prev,
         /* validate with '0' and '1' */
         for (const auto& c : this->alphabet) {
             if (dec_dfa.transitions[pair<string, int>(path[i], c)] == path[i + 1]) {
-                w += c;
+                w += to_string(c);
             }
         }
     }
@@ -444,11 +444,12 @@ string DFA::cad_sync() {
     //    }
     //}
 
-    auto prev = prevs["01"];
+    auto prev = prevs["12"];
     //for (auto it = prev.begin(); it != prev.end(); ++it) {
-    //    cout << it->first << " " << it->second << endl;
+    //    cout << "(" << it->first << "," << it->second << ") ";
     //}
-    output = generate_w("01", prev, dec_dfa);
+    //cout << endl;
+    output = generate_w("12", prev, dec_dfa);
     return output;
 }
 
