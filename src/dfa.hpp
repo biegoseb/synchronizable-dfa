@@ -9,6 +9,7 @@ class DFA {
     int number_states;
     int initial_state;
     int number_final_states;
+    vector<int> alphabet;
     vector<string> states;
     vector<string> pairs_states;
     unordered_set<string> non_final_states;
@@ -26,11 +27,15 @@ class DFA {
     map<string, list<string>> get_adjB();
     vector<string> bfs();
 
-    /* dec sync private methods */
-    vector<string> generate_pairs_states();
+    /* dec and cad sync private methods */
+    vector<string> generate_pairs_states(const vector<string>& st);
     DFA create_dec_dfa();
     bool is_unit(const string& state);
     void dec_bfs(const string& pair_state, DFA& dec_dfa, int& count);
+    unordered_map<string, string> cad_bfs(const string& pair_state, DFA& dec_dfa);
+    vector<string> reconstruct_path(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
+    string generate_w(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
+    string find_str(const string& output);
 
 public:
     DFA();
@@ -42,7 +47,7 @@ public:
     map<pair<string, int>, string> get_transitions();
     void is_sync();
     string dec_sync();
-    
+    string cad_sync();
 };
 
 DFA::DFA() = default;
@@ -78,6 +83,7 @@ void DFA::build_dfa() {
         string state = to_string(i);
         states.push_back(state);
     }
+    alphabet = {0 , 1};
 }
 
 void DFA::add_final_state(const string& fs) {
@@ -223,11 +229,11 @@ void DFA::is_sync() {
     }
 }
 
-vector<string> DFA::generate_pairs_states() {
+vector<string> DFA::generate_pairs_states(const vector<string>& st) {
     vector<string> pairs_states;
-    for (int i = 0; i < number_states; ++i) {
-        for (int j = i + 1; j < number_states; ++j) {
-            string pair = to_string(i) + to_string(j);
+    for (int i = 0; i < st.size(); ++i) {
+        for (int j = i + 1; j < st.size(); ++j) {
+            string pair = st[i] + st[j];
             pairs_states.push_back(pair);
         }
     }
@@ -236,7 +242,7 @@ vector<string> DFA::generate_pairs_states() {
 
 DFA DFA::create_dec_dfa() {
     DFA result;
-    vector<string> pairs_states = generate_pairs_states();
+    vector<string> pairs_states = generate_pairs_states(this->states);
     result.pairs_states = pairs_states;
     result.number_states = this->number_states + pairs_states.size();
     result.initial_state = this->initial_state;
@@ -278,7 +284,62 @@ bool DFA::is_unit(const string& state) {
 
 void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, int& count) {
     string start = pair_state;
-    //vector<string> path;
+
+    /* mark all states as not visited */
+    map<string, bool> visited;
+    for (const auto& state : dec_dfa.states)
+        visited[state] = false;
+        
+    /* create a queue for bfs */
+    list<string> queue;
+
+    /* mark the current state as visited and enqueue it */
+    visited[start] = true;
+    queue.push_back(start);
+
+    list<string>::iterator it;
+    while (!queue.empty()) {
+        /* dequeue a state from queue */
+        start = queue.front();
+        queue.pop_front();
+        
+        /* get all adjacent states of the dequeued state "start"
+           mark as visited and enqueue it if has not been visited */
+        auto adj = get_adj_dec(dec_dfa); 
+        for (it = adj[start].begin(); it != adj[start].end(); ++it) {
+            if (!visited[*it]) {
+                visited[*it] = true;
+                queue.push_back(*it);
+                if (is_unit(*it)) {
+                    ++count;
+                    queue.clear();
+                    break;
+                }
+            }
+        }
+    }
+}
+
+string DFA::dec_sync() {
+    string output;
+    if (this->number_states == 1) {
+        output = "SI";
+        return output;
+    }
+    DFA dec_dfa = create_dec_dfa();
+    auto pairs_states = dec_dfa.pairs_states;
+    int n_pairs = pairs_states.size();
+    int count = 0;
+    for (const auto& p : pairs_states) {
+        dec_bfs(p, dec_dfa, count);
+    }
+    output = (count == n_pairs) ? "SI" : "NO";
+    return output;
+}
+
+unordered_map<string, string> DFA::cad_bfs(const string& pair_state, DFA& dec_dfa) {
+    string start = pair_state;
+    unordered_map<string, string> prev;
 
     /* mark all states as not visited */
     map<string, bool> visited;
@@ -305,32 +366,89 @@ void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, int& count) {
         for (it = adj[start].begin(); it != adj[start].end(); ++it) {
             if (!visited[*it]) {
                 visited[*it] = true;
+                prev[*it] = start;
                 queue.push_back(*it);
                 if (is_unit(*it)) {
-                    ++count;
                     queue.clear();
                     break;
                 }
             }
         }
     }
-    //return path;
+    return prev;
 }
 
-string DFA::dec_sync() {
+vector<string> DFA::reconstruct_path(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa) {
+    /* reconstruct path going backwards from end */
+    string end = prev.begin()->first;
+    vector<string> path {end}; // end -> start
+    while (path.back() != start) {
+        /* inserts the prev state of the current state */
+        //to-do
+        path.push_back(prev[path.back()]);
+    }
+    reverse(path.begin(), path.end()); // start -> end
+
+    /* if start and end are connected return the path */
+    if (path[0] == start) {
+        return path;
+    }
+    path.clear();
+    return path;
+}
+
+string DFA::generate_w(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa) {
+    string w;
+    vector<string> path = reconstruct_path(start, prev, dec_dfa);
+    for (int i = 0; i < (int)path.size() - 1; ++i) {
+        /* validate with '0' and '1' */
+        for (const auto& c : this->alphabet) {
+            if (dec_dfa.transitions[pair<string, int>(path[i], c)] == path[i + 1]) {
+                w += c;
+            }
+        }
+    }
+    return w;
+}
+
+string DFA::find_str(const string& output) {
+    vector<string> X = this->states; // copy of orginal states set S
+    string t; // empty sequence
+    while (X.size() > 1) {
+        vector<string> pairs = generate_pairs_states(X);
+        // find a sequence
+    }
+    return t;
+}
+
+string DFA::cad_sync() {
+    srand(time(0));
     string output;
     if (this->number_states == 1) {
-        output = "SI";
+        string s = {"01E"};
+        int r = rand() % 3;
+        output = s[r];
         return output;
     }
     DFA dec_dfa = create_dec_dfa();
+    unordered_map<string, unordered_map<string, string>> prevs;
     auto pairs_states = dec_dfa.pairs_states;
-    int n_pairs = pairs_states.size();
-    int count = 0;
     for (const auto& p : pairs_states) {
-        dec_bfs(p, dec_dfa, count);
+        unordered_map<string, string> prev = cad_bfs(p, dec_dfa);
+        prevs[p] = prev;
     }
-    output = (count == n_pairs) ? "SI" : "NO";
+    //for (auto it = prevs.begin(); it != prevs.end(); ++it) {
+    //    cout << "pair: " << it->first << " - ";
+    //    for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+    //        cout << "(" << it2->first << ", " << it2->second << ")" << endl;
+    //    }
+    //}
+
+    auto prev = prevs["01"];
+    //for (auto it = prev.begin(); it != prev.end(); ++it) {
+    //    cout << it->first << " " << it->second << endl;
+    //}
+    output = generate_w("01", prev, dec_dfa);
     return output;
 }
 
