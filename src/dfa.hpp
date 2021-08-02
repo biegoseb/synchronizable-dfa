@@ -34,8 +34,8 @@ class DFA {
     void dec_bfs(const string& pair_state, DFA& dec_dfa, int& count);
     unordered_map<string, string> cad_bfs(const string& pair_state, DFA& dec_dfa);
     vector<string> reconstruct_path(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
-    string generate_w(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
-    string find_str(const string& output);
+    string find_sequence(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
+    string get_w(unordered_map<string, unordered_map<string, string>>& prevs, DFA& dec_dfa);
 
 public:
     DFA();
@@ -384,7 +384,6 @@ vector<string> DFA::reconstruct_path(const string& start, unordered_map<string, 
     vector<string> path {end}; // end -> start
     while (path.back() != start) {
         /* inserts the prev state of the current state */
-        //to-do
         path.push_back(prev[path.back()]);
     }
     reverse(path.begin(), path.end()); // start -> end
@@ -397,28 +396,48 @@ vector<string> DFA::reconstruct_path(const string& start, unordered_map<string, 
     return path;
 }
 
-string DFA::generate_w(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa) {
-    string w;
+string DFA::find_sequence(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa) {
+    string seq;
     vector<string> path = reconstruct_path(start, prev, dec_dfa);
     for (int i = 0; i < (int)path.size() - 1; ++i) {
         /* validate with '0' and '1' */
         for (const auto& c : this->alphabet) {
             if (dec_dfa.transitions[pair<string, int>(path[i], c)] == path[i + 1]) {
-                w += to_string(c);
+                seq += to_string(c);
             }
         }
     }
-    return w;
+    return seq;
 }
 
-string DFA::find_str(const string& output) {
-    vector<string> X = this->states; // copy of orginal states set S
-    string t; // empty sequence
-    while (X.size() > 1) {
-        vector<string> pairs = generate_pairs_states(X);
-        // find a sequence
+string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, DFA& dec_dfa) {
+    vector<string> x = this->states; // copy of orginal states set S
+    string seq; // empty sequence t
+    while (x.size() > 1) {
+        /* pick any pair of X */
+        vector<string> pairs = generate_pairs_states(x);
+        string pair = pairs.back();
+
+        /* find a sequence t' taking Si and Sj to the same state */
+        string seq_temp = find_sequence(pair, prevs[pair], dec_dfa);
+
+        /* updates X */
+        set<string> x_temp;
+        for (auto st : x) {
+            // to-do: loop for multiple seq_temp like 'ab'
+            string st_out = dec_dfa.transitions[make_pair(st, stoi(seq_temp))];
+            x_temp.insert(st_out);
+        }
+        x.clear();
+        for (auto st : x_temp) {
+            x.push_back(st);
+        }
+
+        /* updates sequence t */
+        seq += seq_temp;
+        cout << "current seq: " << seq << endl;
     }
-    return t;
+    return seq;
 }
 
 string DFA::cad_sync() {
@@ -444,12 +463,14 @@ string DFA::cad_sync() {
     //    }
     //}
 
-    auto prev = prevs["12"];
+    //string s = "01";
+    //auto prev = prevs[s];
     //for (auto it = prev.begin(); it != prev.end(); ++it) {
     //    cout << "(" << it->first << "," << it->second << ") ";
     //}
     //cout << endl;
-    output = generate_w("12", prev, dec_dfa);
+    //output = find_sequence(s, prev, dec_dfa);
+    output = get_w(prevs, dec_dfa);
     return output;
 }
 
