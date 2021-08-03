@@ -283,7 +283,6 @@ bool DFA::is_unit(const string& state) {
 map<string, list<string>> DFA::get_adj_dec(DFA& dec_dfa) {
     unsigned int size = dec_dfa.states.size();
     map<string, list<string>> adj_list;
-
     for (const auto& s : dec_dfa.states) {
         list<string> l;
         string s_0 = dec_dfa.transitions[pair<string, int>(s, 0)];
@@ -373,7 +372,6 @@ unordered_map<string, string> DFA::cad_bfs(const string& pair_state, DFA& dec_df
     while (!queue.empty()) {
         /* dequeue a state from queue */
         start = queue.front();
-        //path.push_back(start);
         queue.pop_front();
         
         /* get all adjacent states of the dequeued state "start"
@@ -398,6 +396,7 @@ vector<string> DFA::reconstruct_path(const string& start, unordered_map<string, 
     /* reconstruct path going backwards from end */
     string end = prev.begin()->first;
     vector<string> path {end}; // end -> start
+
     while (path.back() != start) {
         /* inserts the prev state of the current state */
         path.push_back(prev[path.back()]);
@@ -432,7 +431,7 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
     while (x.size() > 1) {
         /* pick any pair of X */
         vector<string> pairs = generate_pairs_states(x);
-        string pair = pairs.front();
+        string pair = pairs.back();
 
         /* find a sequence t' taking Si and Sj to the same state */
         string seq_temp = find_sequence(pair, prevs[pair], dec_dfa);
@@ -440,7 +439,6 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
         /* updates X */
         set<string> x_temp;
         for (auto st : x) {
-            // to-do: loop for multiple seq_temp like 'ab'
             string st_out = dec_dfa.transitions[make_pair(st, stoi(seq_temp))];
             x_temp.insert(st_out);
         }
@@ -451,7 +449,6 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
 
         /* updates sequence t = t.t' */
         seq += seq_temp;
-        //cout << "current seq: " << seq << endl;
     }
     return seq;
 }
