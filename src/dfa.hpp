@@ -23,7 +23,6 @@ class DFA {
     /* min sync private methods */
     //DFA* getB(DFA origin);
     vector<string> power_set();
-    map<string, list<string>> get_adj_dec(DFA& dec_dfa);
     map<string, list<string>> get_adjB();
     vector<string> bfs();
 
@@ -31,7 +30,8 @@ class DFA {
     vector<string> generate_pairs_states(const vector<string>& st);
     DFA create_dec_dfa();
     bool is_unit(const string& state);
-    void dec_bfs(const string& pair_state, DFA& dec_dfa, int& count);
+    map<string, list<string>> get_adj_dec(DFA& dec_dfa);
+    void dec_bfs(const string& pair_state, DFA& dec_dfa, map<string, list<string>>& adj, int& count);
     unordered_map<string, string> cad_bfs(const string& pair_state, DFA& dec_dfa);
     vector<string> reconstruct_path(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
     string find_sequence(const string& start, unordered_map<string, string>& prev, DFA& dec_dfa);
@@ -154,22 +154,6 @@ vector<string> DFA::power_set() {
     return pset;
 }
 
-map<string, list<string>> DFA::get_adj_dec(DFA& dec_dfa) {
-    unsigned int size = dec_dfa.states.size();
-    map<string, list<string>> adj_list;
-
-    for (const auto& s : dec_dfa.states) {
-        list<string> l;
-        string s_0 = dec_dfa.transitions[pair<string, int>(s, 0)];
-        string s_1 = dec_dfa.transitions[pair<string, int>(s, 1)];
-        l.push_back(s_0);
-        if (s_0 != s_1)
-            l.push_back(s_1);
-        adj_list[s] = l;
-    }
-    return adj_list;
-}
-
 map<string, list<string>> DFA::get_adjB() {
     auto pset = power_set();
     unsigned int size = pset.size();
@@ -261,16 +245,30 @@ DFA DFA::create_dec_dfa() {
         /* new transition with '0' */
         string s1_0 = this->transitions[pair<string, int>(s1, 0)];
         string s2_0 = this->transitions[pair<string, int>(s2, 0)];
-        string s3_0 {s1_0};
-        if (s1_0 != s2_0)
+        string s3_0;
+        if (s1_0 == s2_0) {
+            s3_0 += s1_0;
+        } else if (s1_0 < s2_0) {
+            s3_0 += s1_0;
             s3_0 += s2_0;
+        } else {
+            s3_0 += s2_0;
+            s3_0 += s1_0;
+        }
 
         /* new transition with '1' */
         string s1_1 = this->transitions[pair<string, int>(s1, 1)];
         string s2_1 = this->transitions[pair<string, int>(s2, 1)];
-        string s3_1 {s1_1};
-        if (s1_1 != s2_1)
+        string s3_1;
+        if (s1_1 == s2_1) {
+            s3_1 += s1_1;
+        } else if (s1_1 < s2_1) {
+            s3_1 += s1_1;
             s3_1 += s2_1;
+        } else {
+            s3_1 += s2_1;
+            s3_1 += s1_1;
+        }
 
         result.add_transition(p, 0, s3_0);
         result.add_transition(p, 1, s3_1);
@@ -282,7 +280,23 @@ bool DFA::is_unit(const string& state) {
     return state.size() == 1;
 }
 
-void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, int& count) {
+map<string, list<string>> DFA::get_adj_dec(DFA& dec_dfa) {
+    unsigned int size = dec_dfa.states.size();
+    map<string, list<string>> adj_list;
+
+    for (const auto& s : dec_dfa.states) {
+        list<string> l;
+        string s_0 = dec_dfa.transitions[pair<string, int>(s, 0)];
+        string s_1 = dec_dfa.transitions[pair<string, int>(s, 1)];
+        l.push_back(s_0);
+        if (s_0 != s_1)
+            l.push_back(s_1);
+        adj_list[s] = l;
+    }
+    return adj_list;
+}
+
+void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, map<string, list<string>>& adj, int& count) {
     string start = pair_state;
 
     /* mark all states as not visited */
@@ -305,13 +319,12 @@ void DFA::dec_bfs(const string& pair_state, DFA& dec_dfa, int& count) {
         
         /* get all adjacent states of the dequeued state "start"
            mark as visited and enqueue it if has not been visited */
-        auto adj = get_adj_dec(dec_dfa); 
         for (it = adj[start].begin(); it != adj[start].end(); ++it) {
             if (!visited[*it]) {
                 visited[*it] = true;
                 queue.push_back(*it);
                 if (is_unit(*it)) {
-                    ++count;
+                    ++count;        
                     queue.clear();
                     break;
                 }
@@ -330,9 +343,12 @@ string DFA::dec_sync() {
     auto pairs_states = dec_dfa.pairs_states;
     int n_pairs = pairs_states.size();
     int count = 0;
-    for (const auto& p : pairs_states) {
-        dec_bfs(p, dec_dfa, count);
+    auto adj = get_adj_dec(dec_dfa);
+    for (const auto& pair : pairs_states) {
+        dec_bfs(pair, dec_dfa, adj, count);
     }
+    cout << "count: " << count << endl;
+    cout << "npairs: " << n_pairs << endl;
     output = (count == n_pairs) ? "SI" : "NO";
     return output;
 }
@@ -416,7 +432,7 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
     while (x.size() > 1) {
         /* pick any pair of X */
         vector<string> pairs = generate_pairs_states(x);
-        string pair = pairs.back();
+        string pair = pairs.front();
 
         /* find a sequence t' taking Si and Sj to the same state */
         string seq_temp = find_sequence(pair, prevs[pair], dec_dfa);
@@ -433,9 +449,9 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
             x.push_back(st);
         }
 
-        /* updates sequence t */
+        /* updates sequence t = t.t' */
         seq += seq_temp;
-        cout << "current seq: " << seq << endl;
+        //cout << "current seq: " << seq << endl;
     }
     return seq;
 }
@@ -456,20 +472,6 @@ string DFA::cad_sync() {
         unordered_map<string, string> prev = cad_bfs(p, dec_dfa);
         prevs[p] = prev;
     }
-    //for (auto it = prevs.begin(); it != prevs.end(); ++it) {
-    //    cout << "pair: " << it->first << " - ";
-    //    for (auto it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-    //        cout << "(" << it2->first << ", " << it2->second << ")" << endl;
-    //    }
-    //}
-
-    //string s = "01";
-    //auto prev = prevs[s];
-    //for (auto it = prev.begin(); it != prev.end(); ++it) {
-    //    cout << "(" << it->first << "," << it->second << ") ";
-    //}
-    //cout << endl;
-    //output = find_sequence(s, prev, dec_dfa);
     output = get_w(prevs, dec_dfa);
     return output;
 }
