@@ -21,7 +21,6 @@ class DFA {
     void add_transition(const string& p, int a, const string& q);
 
     /* min sync private methods */
-    //DFA* getB(DFA origin);
     vector<string> power_set();
     map<string, list<string>> get_adjB();
     vector<string> bfs();
@@ -41,10 +40,6 @@ public:
     DFA();
     DFA(const string& input);
     void print_dfa();
-    void print_sets();
-    unordered_set<string> get_nfs();
-    unordered_set<string> get_fs();
-    map<pair<string, int>, string> get_transitions();
     void is_sync();
     string dec_sync();
     string cad_sync();
@@ -95,10 +90,6 @@ void DFA::add_transition(const string& p, int a, const string& q) {
 }
 
 void DFA::print_dfa() {
-    //cout << number_states << " " << initial_state << " " << number_final_states << " ";
-    //for (const auto& fs : final_states)
-    //    cout << fs << " ";
-    //cout << endl;
     cout << "States: ";
     for (const auto& s : states)
         cout << s << " ";
@@ -107,34 +98,6 @@ void DFA::print_dfa() {
         cout << it->first.first << " " << it->first.second << " " << it->second << endl;
     cout << endl;
     
-}
-
-void DFA::print_sets() {
-    cout << "Non final states: ";
-    for (auto it = non_final_states.cbegin(); it != non_final_states.cend(); ++it)
-        cout << *it << " ";
-    cout << endl;
-    cout << "Final states    : ";
-    for (auto it = final_states.cbegin(); it != final_states.cend(); ++it)
-        cout << *it << " ";
-    cout << endl;
-    cout << "Power Set: ";
-    for (const auto s : power_set()) {
-        cout << s << " ";
-    }
-    cout << endl;
-}
-
-unordered_set<string> DFA::get_nfs() {
-    return non_final_states;
-}
-
-unordered_set<string> DFA::get_fs() {
-    return final_states;
-}
-
-map<pair<string, int>, string> DFA::get_transitions() {
-    return transitions;
 }
 
 vector<string> DFA::power_set() {
@@ -346,8 +309,8 @@ string DFA::dec_sync() {
     for (const auto& pair : pairs_states) {
         dec_bfs(pair, dec_dfa, adj, count);
     }
-    cout << "count: " << count << endl;
-    cout << "npairs: " << n_pairs << endl;
+    //cout << "count: " << count << endl;
+    //cout << "npairs: " << n_pairs << endl;
     output = (count == n_pairs) ? "SI" : "NO";
     return output;
 }
@@ -439,7 +402,13 @@ string DFA::get_w(unordered_map<string, unordered_map<string, string>>& prevs, D
         /* updates X */
         set<string> x_temp;
         for (auto st : x) {
-            string st_out = dec_dfa.transitions[make_pair(st, stoi(seq_temp))];
+            string st_out;
+            string st_temp = st;
+            for (auto c : seq_temp) {
+                int ic = c - '0';
+                st_out = dec_dfa.transitions[make_pair(st_temp, ic)];
+                st_temp = st_out;
+            }
             x_temp.insert(st_out);
         }
         x.clear();
